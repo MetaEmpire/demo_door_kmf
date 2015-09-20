@@ -1,0 +1,107 @@
+
+Development prethoughts:
+
+Python script:
+
+Constantly read serial port
+
+if a cobs frame comes through (check whitelist?), open door for 2-4 seconds
+
+two ways to do it: 
+
+1. send open door signal, sleep for X seconds, close door signal
+
+2. or, spin up a thread to do the same thing, allow main program to keep acting.
+-what would happen if the open door command came again? would i set a flag/global to prevent more threads from spawning?
+-what benefit would i get from allowing the program to keep acting while the door was opening?
+	+objects could come and go from the proximity beacon list
+	+
+
+	
+	
+	
+	
+Moving average, and who sends what and who does what?
+
+-Lets assume that the interface board will spit all the frames sent by the badge reader (within some rssi threshold).
+-So then the python script needs to record somehow enough values to preform a running average.
+
+list of key value pairs, badges (keys) and their current running average (values).
+Check every so often to see 
+
+"if any of the values are above threshold, 
+and then check to see if that key is whitelisted, if so 
+initiate open door routine."
+
+==========================================
+
+if (value > open_door_threshold) && (key.isInList(whitelist))
+	openDoor()
+
+************************************************************
+
+************************************************************
+
+Summary of parts: python door "server"
+
+pi, with interface board on top, with bluetooth sensor and door strike hardware hanging off it.
+
+Interface board is an abstraction layer that only sends COBS frames.... I'm thinking every frame is going to contain the ID / signal strength(rssi) of what the badge sensor reads. 
+
+*[This could also easily account for the readings of the proximity "wheres my stuff" beacon too (since they would send the same info, we would just also need to send "which sensor reported this data" or something.]
+
+Serial communication over usb uart, COBS frames come into the OS.
+
+Pyserial can read this data and decode cobs, frames from the interface board with the aforementioned data parts.
+
+Every time data is read, it must be handled.
+	+update the running average for every white listed badge/source*
+	
+*If a badge doesnt show up, then the rssi value is effetively zero, or "not there".
+For example, assuming the frames come over every second:
+
+Rssi values / running average (last 3 values)
+0 / 0
+0 / 0
+0 / 0
+10 / 3.3 (this value is above threshold, but the running average isn't update yet).
+10 / 6.6
+10 / 10 (pretend the threshold is 9 or something, door opens)
+10 / 10
+0 / 6.6
+0 / 3.3
+0 / 0
+
+
+This "every cobs frame update" routine requires a serial read timeout, so that if nothing comes then the running average can be updated with a zero (because no one showed up to the party).
+
+**** NEED, pyserial time out (small?)
+	+Noted difference between the rate of cobs packets and the serial timeout. Impossible to make the same? Undesirable to make the same? What are the benefits? Will the running average work without it? I think so. If "badge is close" frames come over very fast, then the response time of the running average becomes faster. If the serial timeout is slower, then the "badge here -> badge not here" detection will be slower. Seems acceptable.
+	
+	
+
+-serial timeout read decoding cobs
+
+-main loop *updating* ring buffers of rssi data, one buffer per known bluetooth source. 
+	+Each time the buffer is updated, a new average is calculated and updated in another master list of key(badge)/value(rssi-average) pairs.
+
+-open door routine (either spawn a thread or sleep main thread)
+	+send a cobs frame back at the interface board.
+
+	
+
+	
+psuedo code:
+
+-set up whitelist(hardcoded?)
+-set up data structures based on size of whitelist, (ring buffers, dictonary ie python map)
+-begin mainloop
+	+read
+	+timeout or crc clear?
+		-if timeout, "update" each ring buffer with a zero
+		-if crc clear, and id is on whitelist, update the ring buffer with that RSSI value
+
+
+"update(list, value)" places the new value in the list, drops the oldest value, recalculates the average, writes the average to the dictonary, and if that dictonary entry is above open door threshold, fire open door routine.
+
+"opendoor()" behavior tbd, but there are 2 ways of doing it so far...  

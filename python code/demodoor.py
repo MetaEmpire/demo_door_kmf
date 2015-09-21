@@ -38,11 +38,11 @@ def main():
 	# Open the serial port
 	# ************************** USER ENTERED PORT ***************************
 	port = raw_input("Enter your serial port (EX: COM14)\n>>")
-	cobs = cobs_serial(port, 115200, 0.1)
+	cobs = cobs_serial(port, 115200, 1)
 	
 	# ************************** DEFAULT DEBUG PORT ***************************
 	#print "Defaulting port to COM17. Change script if neeeded"
-	#cobs = cobs_serial('COM17', 115200, 0.1)
+	#cobs = cobs_serial('COM17', 115200, 1)
 	
 	# *************************** END PORT CONFIG ****************************	
 	
@@ -66,11 +66,12 @@ def main():
 	print id_map
 	
 	while(True):
-		new_value = int(raw_input()) #simulate getting a message over serial
-		update_map(id_map, 33621019, new_value)
-		print id_map
+		#new_value = int(raw_input()) #simulate getting a message over serial
+		#update_map(id_map, 33621019, new_value)
+		#print id_map
 		retarray = cobs.block_and_return() #this function checks the CRC for us. returns data only, no crc
-		print repr(retarray)
+		if not(retarray == None):
+			print repr(retarray)
 		#real version
 		#timeout read from cobs serial
 		#dissect ID / rssi from message, call update_map

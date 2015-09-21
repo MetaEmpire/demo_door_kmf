@@ -69,11 +69,12 @@ def main():
 		new_value = int(raw_input()) #simulate getting a message over serial
 		update_map(id_map, 33621019, new_value)
 		print id_map
-		retarray = cobs.block_and_return()
+		retarray = cobs.block_and_return() #this function checks the CRC for us. returns data only, no crc
 		print repr(retarray)
 		#real version
 		#timeout read from cobs serial
 		#dissect ID / rssi from message, call update_map
+		#     c# version used a byte array and the c cobs libraries to convert the bytes
 
 	
 def update_map(id_map, id_to_update, new_value, debug = False):

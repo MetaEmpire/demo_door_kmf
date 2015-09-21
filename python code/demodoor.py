@@ -6,6 +6,8 @@ from cobs_serial import cobs_serial
 #from ctypes import c_ulong
 from collections import deque
 
+rssi_threshold_x10 = 100
+
 header = """
 ****************************
 ******** Demo Door *********
@@ -44,12 +46,30 @@ def main():
 	#print len(whitelist) #
 	
 	print "Building data structures..."
-	id_rssi_map = {}
+	id_map = {}
 	
 	for id in whitelist:
-		id_rssi_map[id] = 0
+		id_map[id] = [0, 0, deque([0,0,0,0,0,0,0,0,0,0])] #total, average, values
 	
-	print id_rssi_map
+	print id_map
+	
+	while(True):
+		new_value = int(raw_input())
+		update_map(id_map, 33621019, new_value)
+		print id_map
+		
+		#real version
+		#
+	
+	#function def update_map(id_map, id_to_update (33621019 for ex), new_value)
+	#new_value = 13 #new value comes in
+	#temp = id_map[33621019][2].popleft() #new value bumps out oldest val
+	#id_map[33621019][0] -= temp
+	#id_map[33621019][0] += new_value #adjust the running total
+	#id_map[33621019][2].append(new_value) #record new value
+	#if id_map[33621019][0] > rssi_threshold_x10: opendoor(id_to_update)
+	
+
 	
 	#id_rssi_map[7] = whitelist #seems to work fine?
 	#list for each ID...
@@ -75,6 +95,27 @@ def main():
 									if each_id[2] > rssi_threshold.....
 	'''
 	
+def update_map(id_map, id_to_update, new_value, debug = False):
+	if not(id_to_update in id_map):
+		return
+	
+	if new_value > rssi_max or new_value < rssi_min:
+		if debug:
+			print("RSSI value recieved that was outside expected ranges. Ignoring.")
+		
+		return
+	
+	temp = id_map[id_to_update][2].popleft() #new value bumps out oldest val
+	id_map[id_to_update][0] -= temp
+	id_map[id_to_update][0] += new_value #adjust the running total
+	id_map[id_to_update][2].append(new_value) #record new value
+	
+	if id_map[id_to_update][0] > rssi_threshold_x10: open_door(id_to_update)		
+	
+def open_door(id_to_update):
+	#send cobs frame to open the door
+	print("Door opened for ID: " + repr(id_to_update))
+
 	
 if __name__ == '__main__':
 	main()
